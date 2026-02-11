@@ -1,0 +1,13 @@
+task-queue-system/
+│
+├── app/
+│   ├── main.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── task_producer.py
+│   └── worker.py
+│
+├── requirements.txt
+├── docker-compose.yml
+└── Dockerfile
