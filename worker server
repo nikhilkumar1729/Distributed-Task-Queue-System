@@ -1,0 +1,19 @@
+// service_b.go
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+func processHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Received request from Service A")
+	fmt.Fprintf(w, "Processed by Service B")
+}
+
+func main() {
+	http.HandleFunc("/process", processHandler)
+	fmt.Println("Service B running on port 8081")
+	log.Fatal(http.ListenAndServe(":8081", nil))
+}
