@@ -1,0 +1,60 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+)
+
+type Task struct {
+	ID   int    `json:"id"`
+	Data string `json:"data"`
+}
+
+type Result struct {
+	ID     int    `json:"id"`
+	Output string `json:"output"`
+}
+
+// Simulated distributed worker
+func processTask(task Task, resultChan chan Result) {
+	fmt.Println("Processing task:", task.ID)
+
+	// Simulate work
+	time.Sleep(2 * time.Second)
+
+	result := Result{
+		ID:     task.ID,
+		Output: "Processed: " + task.Data,
+	}
+
+	resultChan <- result
+}
+
+func taskHandler(w http.ResponseWriter, r *http.Request) {
+	var task Task
+	err := json.NewDecoder(r.Body).Decode(&task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resultChan := make(chan Result)
+
+	// Run task in goroutine (concurrent worker)
+	go processTask(task, resultChan)
+
+	result := <-resultChan
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func main() {
+	http.HandleFunc("/task", taskHandler)
+
+	fmt.Println("Distributed Worker System running on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
