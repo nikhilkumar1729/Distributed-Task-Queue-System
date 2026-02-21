@@ -1,0 +1,57 @@
+package main
+
+import (
+    "context"
+    "encoding/json"
+    "github.com/redis/go-redis/v9"
+    "log"
+    "os"
+    "os/signal"
+    "syscall"
+)
+
+var ctx = context.Background()
+
+func main() {
+    rdb := redis.NewClient(&redis.Options{
+        Addr: "localhost:6379",
+    })
+
+    stop := make(chan os.Signal, 1)
+    signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+    log.Println("Worker started...")
+
+    go func() {
+        for {
+            result, err := rdb.BRPop(ctx, 0, "task_queue").Result()
+            if err != nil {
+                log.Println("Error:", err)
+                continue
+            }
+
+            var task Task
+            err = json.Unmarshal([]byte(result[1]), &task)
+            if err != nil {
+                log.Println("Invalid task:", err)
+                continue
+            }
+
+            processTask(task)
+        }
+    }()
+
+    <-stop
+    log.Println("Worker shutting down...")
+}
+
+func processTask(task Task) {
+    log.Printf("Processing task: %+v\n", task)
+
+    switch task.Type {
+    case "email":
+        log.Println("Sending email:", task.Payload)
+    default:
+        log.Println("Unknown task type")
+    }
+}
