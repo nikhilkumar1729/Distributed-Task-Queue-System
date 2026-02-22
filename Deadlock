@@ -1,0 +1,79 @@
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
+)
+
+type Worker struct {
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+func NewWorker() *Worker {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Worker{
+		ctx:    ctx,
+		cancel: cancel,
+	}
+}
+
+func (w *Worker) Start() {
+	log.Println("Worker starting...")
+
+	w.wg.Add(1)
+	go w.run()
+}
+
+func (w *Worker) run() {
+	defer w.wg.Done()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-w.ctx.Done():
+			log.Println("Worker shutting down...")
+			return
+
+		case <-ticker.C:
+			w.processTask()
+		}
+	}
+}
+
+func (w *Worker) processTask() {
+	log.Println("Processing task...")
+	time.Sleep(500 * time.Millisecond) // simulate work
+}
+
+func (w *Worker) Stop() {
+	log.Println("Stopping worker...")
+	w.cancel()
+	w.wg.Wait() // wait for all goroutines to finish
+	log.Println("Worker stopped cleanly")
+}
+
+func main() {
+	worker := NewWorker()
+	worker.Start()
+
+	// Listen for OS signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Block until signal received
+	sig := <-sigChan
+	log.Println("Received signal:", sig)
+
+	worker.Stop()
+
+	log.Println("Application exited")
+}
