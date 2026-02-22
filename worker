@@ -1,0 +1,19 @@
+package main
+
+import (
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
+)
+
+func main() {
+	c, _ := client.Dial(client.Options{})
+	defer c.Close()
+
+	w := worker.New(c, "task-queue", worker.Options{})
+
+	w.RegisterWorkflow(OrderWorkflow)
+	w.RegisterActivity(ChargePayment)
+	w.RegisterActivity(ShipOrder)
+
+	w.Run(worker.InterruptCh())
+}
